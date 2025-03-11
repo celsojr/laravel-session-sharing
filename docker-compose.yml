@@ -1,0 +1,87 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: secret
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: >
+      bash -c "docker-entrypoint.sh mysqld & 
+      sleep 10 &&
+      mysql -uroot -proot -e 'CREATE DATABASE IF NOT EXISTS laravel1;' &&
+      mysql -uroot -proot -e 'CREATE DATABASE IF NOT EXISTS laravel2;' &&
+      mysql -uroot -proot -e 'GRANT ALL PRIVILEGES ON laravel1.* TO \"laravel\"@\"%\";' &&
+      mysql -uroot -proot -e 'GRANT ALL PRIVILEGES ON laravel2.* TO \"laravel\"@\"%\";' &&
+      mysql -uroot -proot -e 'FLUSH PRIVILEGES;' &&
+      wait"
+    networks:
+      - laravel
+
+  redis:
+    image: redis:alpine
+    container_name: redis_session
+    networks:
+      - laravel
+
+  app1:
+    build: ./docker/php
+    container_name: app1_container
+    working_dir: /var/www
+    volumes:
+      - ./app1:/var/www
+      - ./start.sh:/start.sh
+    environment:
+      - SESSION_DRIVER=redis
+      - SESSION_DOMAIN=.test.local
+      - APP_URL=http://app1.test.local
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=laravel1
+      - DB_USERNAME=laravel
+      - DB_PASSWORD=secret
+    ports:
+      - "8001:8000"
+    command: ["/bin/sh", "-c", "chmod +x /start.sh && /start.sh"]
+    depends_on:
+      - mysql
+    networks:
+      - laravel
+
+  app2:
+    build: ./docker/php
+    container_name: app2_container
+    working_dir: /var/www
+    volumes:
+      - ./app2:/var/www
+      - ./start.sh:/start.sh
+    environment:
+      - SESSION_DRIVER=redis
+      - SESSION_DOMAIN=.test.local
+      - APP_URL=http://app2.test.local
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=laravel2
+      - DB_USERNAME=laravel
+      - DB_PASSWORD=secret
+    ports:
+      - "8002:8000"
+    command: ["/bin/sh", "-c", "chmod +x /start.sh && /start.sh"]
+    depends_on:
+      - mysql
+    networks:
+      - laravel
+
+volumes:
+  mysql_data:
+
+networks:
+  laravel:
+    driver: bridge
