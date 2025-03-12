@@ -36,10 +36,12 @@ services:
     volumes:
       - ./app1:/var/www
       - ./start.sh:/start.sh
+      - ./php-fpm-app1.conf:/usr/local/etc/php-fpm.d/www.conf
     environment:
+      - APP_NAME=app1
       - SESSION_DRIVER=redis
       - SESSION_DOMAIN=.test.local
-      - APP_URL=http://app1.test.local
+      - APP_URL=https://app1.test.local
       - DB_CONNECTION=mysql
       - DB_HOST=mysql
       - DB_PORT=3306
@@ -47,8 +49,7 @@ services:
       - DB_USERNAME=laravel
       - DB_PASSWORD=secret
     ports:
-      - "8001:8000"
-    command: ["/bin/sh", "-c", "chmod +x /start.sh && /start.sh"]
+      - "9001:9001"
     depends_on:
       - mysql
     networks:
@@ -61,10 +62,12 @@ services:
     volumes:
       - ./app2:/var/www
       - ./start.sh:/start.sh
+      - ./php-fpm-app2.conf:/usr/local/etc/php-fpm.d/www.conf
     environment:
+      - APP_NAME=app2
       - SESSION_DRIVER=redis
       - SESSION_DOMAIN=.test.local
-      - APP_URL=http://app2.test.local
+      - APP_URL=https://app2.test.local
       - DB_CONNECTION=mysql
       - DB_HOST=mysql
       - DB_PORT=3306
@@ -72,10 +75,26 @@ services:
       - DB_USERNAME=laravel
       - DB_PASSWORD=secret
     ports:
-      - "8002:8000"
-    command: ["/bin/sh", "-c", "chmod +x /start.sh && /start.sh"]
+      - "9002:9002"
     depends_on:
       - mysql
+    networks:
+      - laravel
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx_proxy
+    restart: always
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/certs:/etc/nginx/certs
+      - ./nginx/logs:/var/log/nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - app1
+      - app2
     networks:
       - laravel
 

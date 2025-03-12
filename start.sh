@@ -8,6 +8,8 @@ do
 done
 echo "MySQL is up!"
 
-# Run migrations and start the server
+# Run migrations
 php artisan migrate --force
-php artisan serve --host=0.0.0.0 --port=8000
+
+# Start PHP-FPM
+php-fpm
